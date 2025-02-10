@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sound Board</title>
+    <script src="./webComponents/SoundCard.js" defer></script>
+    <script src="./webComponents/CustomButton.js" defer></script>
+    <script src="./webComponents/HomeScreen.js" defer></script>
+    <script src="./webComponents/ManagePlaylistScreen.js" defer></script>
+    <script src="./scripts/navigation.js" defer></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        display: flex;
+        justify-content: space-around;
+        width: 100%;
+        background-color: #f0f0f0;
+        padding: 10px 0;
+        border-bottom: 1px solid #ccc;
+      }
+      main {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <custom-button
+        label="Home"
+        onclick="showScreen('home-screen')"
+      ></custom-button>
+      <custom-button
+        label="Manage Playlist"
+        onclick="showScreen('manage-playlist-screen')"
+      ></custom-button>
+    </header>
+    <home-screen id="home-screen"></home-screen>
+    
+    <manage-playlist-screen
+      id="manage-playlist-screen"
+      style="display: none"
+    ></manage-playlist-screen>
+    <script>
+      function showManagePlaylist() {
+        document.getElementById("main-content").style.display = "none";
+        document.getElementById("manage-playlist-screen").style.display =
+          "block";
+      }
+
+      function addNewSound() {
+        // Logic to add a new sound
+      }
+    </script>
+  </body>
+</html>

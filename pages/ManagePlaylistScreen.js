@@ -55,7 +55,24 @@ class ManagePlaylistScreen extends HTMLElement {
     `;
   }
 
-  connectedCallback() {
+  async checkAndAddDefaultSong() {
+    const songs = await this.db.getAllSongs();
+    if (songs.length === 0) {
+      console.log("No hay canciones, agregando spongebob-fail.mp3 por defecto");
+      const response = await fetch("/spongebob-fail.mp3");
+      const blob = await response.blob();
+      const defaultSong = {
+        title: "Default Song",
+        data: blob,
+      };
+      await this.db.saveSong(defaultSong);
+      document.dispatchEvent(new CustomEvent("songs-updated"));
+    }
+  }
+
+  async connectedCallback() {
+    await this.checkAndAddDefaultSong();
+
     this.loadSounds();
 
     this.shadowRoot
@@ -102,6 +119,7 @@ class ManagePlaylistScreen extends HTMLElement {
       // Reset the input values
       titleInput.value = "";
       fileInput.value = "";
+      document.dispatchEvent(new CustomEvent("songs-updated"));
     });
   }
 

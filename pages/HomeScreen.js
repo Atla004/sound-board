@@ -1,4 +1,3 @@
-// filepath: /c:/Users/andre/Documents/VisualStudio/Uru/Vanila/sound-board/pages/HomeScreen.js
 import db from "../services/indexdb.js";
 import "../webComponents/SoundCard.js";
 
@@ -10,6 +9,7 @@ class HomeScreen extends HTMLElement {
   }
 
   async loadSongs() {
+    console.log("Loading songssssss");
     const songs = await this.db.getAllSongs();
     this.shadowRoot.innerHTML = `
       <style>
@@ -29,10 +29,30 @@ class HomeScreen extends HTMLElement {
     `;
   }
 
+
+  
+  stopAllSongs() {
+    console.log("Stopping all songs");
+    this.shadowRoot.querySelectorAll("sound-card").forEach(card => {
+      if (card.audio) {
+        card.audio.pause();
+        card.audio.currentTime = 0;
+      }
+      // Actualiza el estado para reflejar que no se está reproduciendo (por ejemplo, color rojo)
+      card.state = false;
+      card.setAttribute("state", "false");
+      card.updateCard();
+    });
+  }
+
   async connectedCallback() {
+
     await this.loadSongs();
-    // Escucha el evento personalizado para recargar las canciones
-    document.addEventListener("songs-updated", () => this.loadSongs());
+    // Escucha el evento personalizado para detener todas las canciones y recargar la lista 
+    document.addEventListener("songs-updated", async () => {
+      this.stopAllSongs();
+      await this.loadSongs();
+    });
   }
 }
 

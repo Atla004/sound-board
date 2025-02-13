@@ -32,8 +32,23 @@
         margin-top: 20px;
       }
     </style>
-  </head>
+      <script type="module">
+        import { exportAllSongsToJSON, importSongsFromJSON } from "./services/audioConverter.js";
 
+        // Función que se invoca al hacer clic en el botón "export"
+        window.exportAudio = async function () {
+          await exportAllSongsToJSON();
+        }
+
+        // Función que se invoca al seleccionar un archivo para importar
+        window.importAudio = async function (event) {
+          const file = event.target.files[0];
+          if (file) {
+            await importSongsFromJSON(file);
+          }
+        }
+      </script>
+  </head>
   <body>
     <header>
       <custom-button
@@ -44,6 +59,16 @@
         label="Manage Playlist"
         onclick="showScreen('manage-playlist-screen')"
       ></custom-button>
+      <custom-button
+        label="export"
+        onclick="exportAudio()"
+      ></custom-button>
+      <custom-button
+  label="Import"
+  onclick="document.getElementById('importFileInput').click()"
+></custom-button>
+<input type="file" id="importFileInput" accept="application/json" style="display: none;" onchange="importAudio(event)" />
+      
     </header>
 
     <home-screen id="home-screen"></home-screen>
@@ -52,6 +77,5 @@
       id="manage-playlist-screen"
       style="display: none"
     ></manage-playlist-screen>
-
   </body>
 </html>

@@ -93,7 +93,7 @@ class ManagePlaylistScreen extends HTMLElement {
     // Guardamos también el archivo de audio
     const newSong = {
       title: title,
-      data: file // Aseguramos guardar el archivo (que es un Blob)
+      data: file 
     };
 
     this.db.saveSong(newSong).then(() => {

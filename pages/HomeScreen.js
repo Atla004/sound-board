@@ -14,11 +14,15 @@ class HomeScreen extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         main {
-          padding: 10px;
+          display: grid;
+          margin-bottom: 10px;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 10px;
+          width: 90%;
+          padding: 20px;
         }
         sound-card {
-          display: block;
-          margin-bottom: 10px;
+
         }
       </style>
       <main>

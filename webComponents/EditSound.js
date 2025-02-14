@@ -7,29 +7,28 @@ class EditSound extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
-      <style>
+   <style>
         .edit-sound {
           position: relative;
-          background: white;
+          background: #2d2d2d;
           border-radius: 12px;
           padding: 16px;
-          margin: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          transition: transform 0.3s, box-shadow 0.3s;
         }
-
-        .edit-sound:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        .sound {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
-
+        .song-text {
+          font-size: 20px;
+          font-weight: 600;
+        }
+          
         .edit-icon {
-          position: absolute;
-          top: 12px;
-          right: 12px;
+
+          margin-left: 12px;
           cursor: pointer;
-          background: #f8f9fa;
-          border-radius: 50%;
+          border-radius: 10%;
           width: 32px;
           height: 32px;
           display: flex;
@@ -37,38 +36,41 @@ class EditSound extends HTMLElement {
           justify-content: center;
           transition: background-color 0.2s;
         }
-
         .edit-icon:hover {
-          background: #e9ecef;
+          background:rgb(52, 96, 139);
         }
-
+          
         .modal {
-          display: none;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          visibility: hidden;
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
           background: rgba(0, 0, 0, 0.5);
           z-index: 1000;
+          align-items: center; 
+          justify-content: center;
+
         }
 
         .modal.show {
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          opacity: 1;
+          visibility: visible;
         }
 
-        .modal-content {
+        .modal-card {
           background: white;
-          padding: 24px;
           border-radius: 12px;
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-          width: 90%;
-          max-width: 400px;
+          width: 300px;
+          padding: 20px;
         }
 
         input {
+          box-sizing: border-box;
           width: 100%;
           padding: 10px;
           margin: 10px 0;
@@ -76,20 +78,18 @@ class EditSound extends HTMLElement {
           border-radius: 6px;
           font-size: 16px;
           transition: border-color 0.2s;
+          
         }
-
         input:focus {
           outline: none;
           border-color: #3498db;
         }
-
         .modal-buttons {
           display: flex;
           gap: 12px;
           justify-content: flex-end;
           margin-top: 20px;
         }
-
         button {
           padding: 10px 20px;
           border: none;
@@ -98,57 +98,46 @@ class EditSound extends HTMLElement {
           font-weight: 600;
           transition: background 0.2s;
         }
-
         #applyButton {
           background: #2ecc71;
           color: white;
         }
-
         #applyButton:hover {
           background: #27ae60;
         }
-
         #closeModal {
           background: #e9ecef;
           color: #495057;
         }
-
         #closeModal:hover {
           background: #dee2e6;
         }
-
         #deleteButton {
           background: #e74c3c;
           color: white;
         }
-
         #deleteButton:hover {
           background: #c0392b;
         }
-
-        @media (max-width: 768px) {
-          .modal-content {
-            width: 95%;
-            padding: 16px;
-          }
-        }
       </style>
+
       <div class="edit-sound">
-        <span id="songText">${this.getAttribute("text") || ""}</span>
+        <div class="sound">
+        <span class="song-text" id="songText">${this.getAttribute("text") || ""}</span>
         <span class="edit-icon" id="editIcon">✏️</span>
+        </div>
         <div class="modal">
-          <div class="modal-content">
-            <input type="text" id="nameInput" placeholder="New song name" />
+          <div class="modal-card">
+            <input type="text" id="nameInput" placeholder="New song name" maxlength="30" />
             <div class="modal-buttons">
-              <button id="closeModal">Cancel</button>
+              <button id="applyButton">Apply</button>
+              <button id="closeModal">Close</button>
               <button id="deleteButton">Delete</button>
-              <button id="applyButton">Save</button>
             </div>
           </div>
         </div>
-      </div>
-    `;
-    this.db = null;
+      </div>`;
+    this.db = null; // Será inicializado externamente
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -182,6 +171,7 @@ class EditSound extends HTMLElement {
     this.shadowRoot
       .getElementById("applyButton")
       .addEventListener("click", () => this.saveChanges());
+
   }
 
   setDatabase(db) {
@@ -189,7 +179,18 @@ class EditSound extends HTMLElement {
   }
 
   closeModal() {
-    this.shadowRoot.querySelector(".modal").classList.remove("show");
+    this.shadowRoot.querySelector(".modal").classList.remove
+    ("show");
+  }
+
+  changeSound() {
+    // Logic to change the sound
+    console.log("Change sound clicked for song ID:", this.songId);
+    // Dispatch a custom event
+    const changeEvent = new CustomEvent("song-changed", {
+      detail: { songId: this.songId },
+    });
+    this.dispatchEvent(changeEvent);
   }
 
   deleteSound() {
@@ -198,6 +199,7 @@ class EditSound extends HTMLElement {
       return;
     }
     
+
     console.log("Delete sound clicked for song ID:", this.songId);
 
     this.db.deleteSong(this.songId)
@@ -207,12 +209,12 @@ class EditSound extends HTMLElement {
           detail: { songId: this.songId },
         });
         this.dispatchEvent(deleteEvent);
-        this.remove();
+        this.remove(); // Remove the element from the DOM
       })
       .catch((error) => console.error("Error deleting song:", error));
   }
 
-  saveChanges() {
+  saveChanges(){
     if (!this.db) {
       console.error("Database not initialized.");
       return;
@@ -224,7 +226,7 @@ class EditSound extends HTMLElement {
     }
     console.log("Save changes clicked for song ID:", this.songId);
     const song = {
-      id: Number(this.songId),
+      id: Number(this.songId), // Convertir a number
       title: newName,
     };
     this.db.updateSong(song)
@@ -238,6 +240,8 @@ class EditSound extends HTMLElement {
       })
       .catch((error) => console.error("Error updating song:", error));
   }
+
+
 }
 
 customElements.define("edit-sound", EditSound);

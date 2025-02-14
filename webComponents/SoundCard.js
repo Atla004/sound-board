@@ -50,19 +50,15 @@ class SoundCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         .card {
+          padding: 1rem;
           background: #2d2d2d;
           border-radius: 16px;
-          padding: 24px;
-          width: 250px;
-          min-height: 250px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: space-between;
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-          margin: 16px;
           position: relative;
           overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -132,19 +128,12 @@ class SoundCard extends HTMLElement {
           opacity: 0.5;
         }
 
-        @media (max-width: 768px) {
-          .card {
-            width: 200px;
-            min-height: 200px;
-            padding: 16px;
-          }
-        }
       </style>
-      <div class="card ${this.state ? 'playing' : ''}" id="card">
+      <div class="card ${this.state ? "playing" : ""}" id="card">
         <span id="text">${this.text}</span>
         <canvas class="visualizer" id="visualizer"></canvas>
         <volume-slider id="slider"></volume-slider>
-        <button class="loop-button ${this.loop ? 'active' : ''}" id="loopBtn">
+        <button class="loop-button ${this.loop ? "active" : ""}" id="loopBtn">
           <svg viewBox="0 0 24 24" class="loop-icon">
             <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
           </svg>
@@ -152,13 +141,14 @@ class SoundCard extends HTMLElement {
       </div>
     `;
 
-    this.visualizer = this.shadowRoot.getElementById('visualizer');
-    this.visualizerCtx = this.visualizer.getContext('2d');
+    this.visualizer = this.shadowRoot.getElementById("visualizer");
+    this.visualizerCtx = this.visualizer.getContext("2d");
   }
 
   setupAudioContext() {
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
       const bufferLength = this.analyser.frequencyBinCount;
@@ -183,37 +173,42 @@ class SoundCard extends HTMLElement {
     const width = this.visualizer.width;
     const height = this.visualizer.height;
     const bufferLength = this.analyser.frequencyBinCount;
-    
+
     this.analyser.getByteFrequencyData(this.dataArray);
-    
+
     this.visualizerCtx.clearRect(0, 0, width, height);
-    const barWidth = width / bufferLength * 2.5;
+    const barWidth = (width / bufferLength) * 2.5;
     let x = 0;
 
     for (let i = 0; i < bufferLength; i++) {
       const barHeight = (this.dataArray[i] / 255) * height;
-      const gradient = this.visualizerCtx.createLinearGradient(0, height, 0, height - barHeight);
-      gradient.addColorStop(0, '#6366f1');
-      gradient.addColorStop(1, '#818cf8');
-      
+      const gradient = this.visualizerCtx.createLinearGradient(
+        0,
+        height,
+        0,
+        height - barHeight
+      );
+      gradient.addColorStop(0, "#6366f1");
+      gradient.addColorStop(1, "#818cf8");
+
       this.visualizerCtx.fillStyle = gradient;
       this.visualizerCtx.fillRect(x, height - barHeight, barWidth, barHeight);
       x += barWidth + 1;
     }
-  }
+  };
 
   updateCard() {
     const card = this.shadowRoot.querySelector("#card");
     const textEl = this.shadowRoot.querySelector("#text");
     if (card) {
-      card.className = `card ${this.state ? 'playing' : ''}`;
+      card.className = `card ${this.state ? "playing" : ""}`;
     }
     if (textEl) {
       textEl.textContent = this.text;
     }
 
     // Update canvas size
-    const visualizer = this.shadowRoot.getElementById('visualizer');
+    const visualizer = this.shadowRoot.getElementById("visualizer");
     if (visualizer) {
       visualizer.width = visualizer.offsetWidth;
       visualizer.height = visualizer.offsetHeight;
@@ -224,7 +219,7 @@ class SoundCard extends HTMLElement {
     const card = this.shadowRoot.querySelector("#card");
     if (card) {
       card.addEventListener("click", (e) => {
-        if (!e.target.closest('.loop-button')) {
+        if (!e.target.closest(".loop-button")) {
           this.toggleSoundState();
           if (this.songId && this.db) {
             if (!this.audio) {
@@ -245,7 +240,7 @@ class SoundCard extends HTMLElement {
       loopBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         this.loop = !this.loop;
-        loopBtn.className = `loop-button ${this.loop ? 'active' : ''}`;
+        loopBtn.className = `loop-button ${this.loop ? "active" : ""}`;
         if (this.audio) {
           this.audio.loop = this.loop;
         }
@@ -254,18 +249,20 @@ class SoundCard extends HTMLElement {
   }
 
   loadAudioFromDB() {
-    this.db.getSong(Number(this.songId))
+    this.db
+      .getSong(Number(this.songId))
       .then((song) => {
-        const audioBlob = song.data instanceof Blob
-          ? song.data
-          : new Blob([song.data], { type: "audio/mpeg" });
+        const audioBlob =
+          song.data instanceof Blob
+            ? song.data
+            : new Blob([song.data], { type: "audio/mpeg" });
         const blobUrl = URL.createObjectURL(audioBlob);
         this.audio = new Audio(blobUrl);
         this.audio.loop = this.loop;
-        
+
         // Set up audio context and visualizer
         this.setupAudioContext();
-        
+
         if (!this.loop) {
           this.audio.addEventListener("ended", () => {
             this.state = false;

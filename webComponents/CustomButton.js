@@ -4,12 +4,13 @@ class CustomButton extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this.label = this.getAttribute("label") || "Click me";
     this.onClick = null;
+    this.disabled = this.hasAttribute("disabled");
   }
 
   connectedCallback() {
     this.render();
     this.shadowRoot.querySelector("button").addEventListener("click", () => {
-      if (this.onClick) {
+      if (this.onClick && !this.disabled) {
         this.onClick();
       }
     });
@@ -26,7 +27,7 @@ class CustomButton extends HTMLElement {
           background: #2d2d2d;
           color: #ffffff;
           border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 12px 24px;
+          padding: 12px 20px;
           border-radius: 8px;
           font-size: 16px;
           font-weight: 600;
@@ -47,6 +48,12 @@ class CustomButton extends HTMLElement {
           background: #404040;
         }
 
+        button:disabled {
+          background: #555555;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+
         @media (max-width: 768px) {
           button {
             padding: 10px 20px;
@@ -54,7 +61,7 @@ class CustomButton extends HTMLElement {
           }
         }
       </style>
-      <button>${this.label}</button>
+      <button ${this.disabled ? "disabled" : ""}>${this.label}</button>
     `;
   }
 }

@@ -9,6 +9,15 @@
     <script src="./pages/ManagePlaylistScreen.js" defer type="module"></script>
     <script src="./scripts/navigation.js" defer></script>
     <style>
+      :root {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --text-primary: #ffffff;
+        --text-secondary: #b3b3b3;
+        --accent-color: #6366f1;
+        --accent-hover: #818cf8;
+      }
+
       body {
         font-family: Arial, sans-serif;
         display: flex;
@@ -16,38 +25,49 @@
         align-items: center;
         margin: 0;
         padding: 0;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
       }
+
       header {
         display: flex;
         justify-content: space-around;
         width: 100%;
-        background-color: #f0f0f0;
-        padding: 10px 0;
-        border-bottom: 1px solid #ccc;
+        background: var(--bg-secondary);
+        padding: 15px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       }
+
       main {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         margin-top: 20px;
+        width: 100%;
+        max-width: 1200px;
+        padding: 20px;
+      }
+
+      #importFileInput {
+        display: none;
       }
     </style>
-      <script type="module">
-        import { exportAllSongsToJSON, importSongsFromJSON } from "./services/audioConverter.js";
+    <script type="module">
+      import { exportAllSongsToJSON, importSongsFromJSON } from "./services/audioConverter.js";
 
-        // Función que se invoca al hacer clic en el botón "export"
-        window.exportAudio = async function () {
-          await exportAllSongsToJSON();
-        }
+      window.exportAudio = async function () {
+        await exportAllSongsToJSON();
+      }
 
-        // Función que se invoca al seleccionar un archivo para importar
-        window.importAudio = async function (event) {
-          const file = event.target.files[0];
-          if (file) {
-            await importSongsFromJSON(file);
-          }
+      window.importAudio = async function (event) {
+        const file = event.target.files[0];
+        if (file) {
+          await importSongsFromJSON(file);
         }
-      </script>
+      }
+    </script>
   </head>
   <body>
     <header>
@@ -60,22 +80,17 @@
         onclick="showScreen('manage-playlist-screen')"
       ></custom-button>
       <custom-button
-        label="export"
+        label="Export"
         onclick="exportAudio()"
       ></custom-button>
       <custom-button
-  label="Import"
-  onclick="document.getElementById('importFileInput').click()"
-></custom-button>
-<input type="file" id="importFileInput" accept="application/json" style="display: none;" onchange="importAudio(event)" />
-      
+        label="Import"
+        onclick="document.getElementById('importFileInput').click()"
+      ></custom-button>
+      <input type="file" id="importFileInput" accept="application/json" onchange="importAudio(event)" />
     </header>
 
     <home-screen id="home-screen"></home-screen>
-
-    <manage-playlist-screen
-      id="manage-playlist-screen"
-      style="display: none"
-    ></manage-playlist-screen>
+    <manage-playlist-screen id="manage-playlist-screen" style="display: none"></manage-playlist-screen>
   </body>
 </html>

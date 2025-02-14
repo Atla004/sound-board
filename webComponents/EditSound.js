@@ -10,53 +10,145 @@ class EditSound extends HTMLElement {
       <style>
         .edit-sound {
           position: relative;
-          border: 1px solid #ccc;
-          padding: 10px;
-          margin: 10px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
+          background: white;
+          border-radius: 12px;
+          padding: 16px;
+          margin: 12px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          transition: transform 0.3s, box-shadow 0.3s;
         }
+
+        .edit-sound:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
         .edit-icon {
           position: absolute;
-          top: 5px;
-          right: 5px;
+          top: 12px;
+          right: 12px;
           cursor: pointer;
+          background: #f8f9fa;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.2s;
         }
+
+        .edit-icon:hover {
+          background: #e9ecef;
+        }
+
         .modal {
           display: none;
           position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background-color: white;
-          padding: 20px;
-          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 1000;
         }
+
         .modal.show {
-          display: block;
-        }
-        .modal-buttons {
-          margin-top: 10px;
           display: flex;
-          gap: 10px;
+          align-items: center;
           justify-content: center;
+        }
+
+        .modal-content {
+          background: white;
+          padding: 24px;
+          border-radius: 12px;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+          width: 90%;
+          max-width: 400px;
+        }
+
+        input {
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          border: 2px solid #e9ecef;
+          border-radius: 6px;
+          font-size: 16px;
+          transition: border-color 0.2s;
+        }
+
+        input:focus {
+          outline: none;
+          border-color: #3498db;
+        }
+
+        .modal-buttons {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 20px;
+        }
+
+        button {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: background 0.2s;
+        }
+
+        #applyButton {
+          background: #2ecc71;
+          color: white;
+        }
+
+        #applyButton:hover {
+          background: #27ae60;
+        }
+
+        #closeModal {
+          background: #e9ecef;
+          color: #495057;
+        }
+
+        #closeModal:hover {
+          background: #dee2e6;
+        }
+
+        #deleteButton {
+          background: #e74c3c;
+          color: white;
+        }
+
+        #deleteButton:hover {
+          background: #c0392b;
+        }
+
+        @media (max-width: 768px) {
+          .modal-content {
+            width: 95%;
+            padding: 16px;
+          }
         }
       </style>
       <div class="edit-sound">
         <span id="songText">${this.getAttribute("text") || ""}</span>
         <span class="edit-icon" id="editIcon">✏️</span>
         <div class="modal">
-          <input type="text" id="nameInput" placeholder="New song name" />
-          <div class="modal-buttons">
-            <button id="applyButton">Apply</button>
-            <button id="closeModal">Close</button>
-            <button id="deleteButton">Delete</button>
+          <div class="modal-content">
+            <input type="text" id="nameInput" placeholder="New song name" />
+            <div class="modal-buttons">
+              <button id="closeModal">Cancel</button>
+              <button id="deleteButton">Delete</button>
+              <button id="applyButton">Save</button>
+            </div>
           </div>
         </div>
       </div>
     `;
-    this.db = null; // Será inicializado externamente
+    this.db = null;
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -74,7 +166,6 @@ class EditSound extends HTMLElement {
       throw new Error("song-id attribute is required for edit-sound component");
     }
 
-    // Al hacer clic en el icono, actualizamos el input y mostramos el modal
     this.shadowRoot.getElementById("editIcon")
       .addEventListener("click", () => {
         const text = this.getAttribute("text") || "";
@@ -91,7 +182,6 @@ class EditSound extends HTMLElement {
     this.shadowRoot
       .getElementById("applyButton")
       .addEventListener("click", () => this.saveChanges());
-
   }
 
   setDatabase(db) {
@@ -99,18 +189,7 @@ class EditSound extends HTMLElement {
   }
 
   closeModal() {
-    this.shadowRoot.querySelector(".modal").classList.remove
-    ("show");
-  }
-
-  changeSound() {
-    // Logic to change the sound
-    console.log("Change sound clicked for song ID:", this.songId);
-    // Dispatch a custom event
-    const changeEvent = new CustomEvent("song-changed", {
-      detail: { songId: this.songId },
-    });
-    this.dispatchEvent(changeEvent);
+    this.shadowRoot.querySelector(".modal").classList.remove("show");
   }
 
   deleteSound() {
@@ -119,7 +198,6 @@ class EditSound extends HTMLElement {
       return;
     }
     
-
     console.log("Delete sound clicked for song ID:", this.songId);
 
     this.db.deleteSong(this.songId)
@@ -129,12 +207,12 @@ class EditSound extends HTMLElement {
           detail: { songId: this.songId },
         });
         this.dispatchEvent(deleteEvent);
-        this.remove(); // Remove the element from the DOM
+        this.remove();
       })
       .catch((error) => console.error("Error deleting song:", error));
   }
 
-  saveChanges(){
+  saveChanges() {
     if (!this.db) {
       console.error("Database not initialized.");
       return;
@@ -146,7 +224,7 @@ class EditSound extends HTMLElement {
     }
     console.log("Save changes clicked for song ID:", this.songId);
     const song = {
-      id: Number(this.songId), // Convertir a number
+      id: Number(this.songId),
       title: newName,
     };
     this.db.updateSong(song)
@@ -160,8 +238,6 @@ class EditSound extends HTMLElement {
       })
       .catch((error) => console.error("Error updating song:", error));
   }
-
-
 }
 
 customElements.define("edit-sound", EditSound);

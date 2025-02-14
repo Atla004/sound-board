@@ -21,15 +21,41 @@ class CustomButton extends HTMLElement {
 
   render() {
     this.shadowRoot.innerHTML = `
-            <style>
-                button {
-                    padding: 10px 20px;
-                    font-size: 16px;
-                    cursor: pointer;
-                }
-            </style>
-            <button>${this.label}</button>
-        `;
+      <style>
+        button {
+          background: #2d2d2d;
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+          background: #363636;
+          border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        button:active {
+          transform: translateY(0);
+          background: #404040;
+        }
+
+        @media (max-width: 768px) {
+          button {
+            padding: 10px 20px;
+            font-size: 14px;
+          }
+        }
+      </style>
+      <button>${this.label}</button>
+    `;
   }
 }
 

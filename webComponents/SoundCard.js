@@ -14,8 +14,11 @@ class SoundCard extends HTMLElement {
     this.songId = this.getAttribute("song-id") || "";
     this.audio = null;
     this.db = db;
-    // Nueva propiedad para el loop, por defecto reproducir 1 sola vez
     this.loop = false;
+    this.audioContext = null;
+    this.analyser = null;
+    this.dataArray = null;
+    this.animationFrame = null;
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -30,104 +33,224 @@ class SoundCard extends HTMLElement {
   }
 
   connectedCallback() {
-    this.render(); // Crea la estructura estática una sola vez
+    this.render();
     this.updateCard();
-    this.attachListeners();       // Listener de click para la tarjeta
-    this.attachSliderListeners(); // Listener para el slider (solo una vez)
-    this.attachLoopButtonListener(); // Listener para el botón de loop
+    this.attachListeners();
+    this.attachSliderListeners();
+    this.attachLoopButtonListener();
+  }
+
+  disconnectedCallback() {
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame);
+    }
   }
 
   render() {
-    // Se crea la estructura estática una sola vez, agregando el botón de loop
     this.shadowRoot.innerHTML = `
       <style>
         .card {
+          background: #2d2d2d;
+          border-radius: 16px;
+          padding: 24px;
+          width: 250px;
+          min-height: 250px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          width: 200px;
-          height: 200px;
-          border: 1px solid #000;
+          justify-content: space-between;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+          margin: 16px;
+          position: relative;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        button {
-          margin-top: 10px;
+
+        .card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .card.playing {
+          background: #363636;
+          box-shadow: 0 8px 15px rgba(99, 102, 241, 0.2);
+          border: 1px solid rgba(99, 102, 241, 0.5);
+        }
+
+        #text {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #ffffff;
+          margin-bottom: 1rem;
+          text-align: center;
+          z-index: 1;
+        }
+
+        .loop-button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.2s;
+          z-index: 1;
+        }
+
+        .loop-button:hover {
+          transform: scale(1.1);
+        }
+
+        .loop-button svg {
+          width: 24px;
+          height: 24px;
+          fill: #b3b3b3;
+          transition: fill 0.2s;
+        }
+
+        .loop-button.active svg {
+          fill: #6366f1;
+        }
+
+        volume-slider {
+          width: 100%;
+          margin: 1rem 0;
+          z-index: 1;
+        }
+
+        .visualizer {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 60px;
+          opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+          .card {
+            width: 200px;
+            min-height: 200px;
+            padding: 16px;
+          }
         }
       </style>
-      <div class="card" id="card">
+      <div class="card ${this.state ? 'playing' : ''}" id="card">
         <span id="text">${this.text}</span>
+        <canvas class="visualizer" id="visualizer"></canvas>
         <volume-slider id="slider"></volume-slider>
-        <button id="loopBtn">${this.loop ? "Reproducir en loop" : "Reproducir 1 sola vez"}</button>
+        <button class="loop-button ${this.loop ? 'active' : ''}" id="loopBtn">
+          <svg viewBox="0 0 24 24" class="loop-icon">
+            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+          </svg>
+        </button>
       </div>
     `;
+
+    this.visualizer = this.shadowRoot.getElementById('visualizer');
+    this.visualizerCtx = this.visualizer.getContext('2d');
+  }
+
+  setupAudioContext() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      const bufferLength = this.analyser.frequencyBinCount;
+      this.dataArray = new Uint8Array(bufferLength);
+
+      const source = this.audioContext.createMediaElementSource(this.audio);
+      source.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+    }
+  }
+
+  drawVisualizer = () => {
+    if (!this.state) {
+      if (this.animationFrame) {
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = null;
+      }
+      return;
+    }
+
+    this.animationFrame = requestAnimationFrame(this.drawVisualizer);
+    const width = this.visualizer.width;
+    const height = this.visualizer.height;
+    const bufferLength = this.analyser.frequencyBinCount;
+    
+    this.analyser.getByteFrequencyData(this.dataArray);
+    
+    this.visualizerCtx.clearRect(0, 0, width, height);
+    const barWidth = width / bufferLength * 2.5;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+      const barHeight = (this.dataArray[i] / 255) * height;
+      const gradient = this.visualizerCtx.createLinearGradient(0, height, 0, height - barHeight);
+      gradient.addColorStop(0, '#6366f1');
+      gradient.addColorStop(1, '#818cf8');
+      
+      this.visualizerCtx.fillStyle = gradient;
+      this.visualizerCtx.fillRect(x, height - barHeight, barWidth, barHeight);
+      x += barWidth + 1;
+    }
   }
 
   updateCard() {
-    // Actualiza solo los elementos dinámicos sin recrear la estructura
     const card = this.shadowRoot.querySelector("#card");
     const textEl = this.shadowRoot.querySelector("#text");
     if (card) {
-      card.style.backgroundColor = this.state ? "lightgreen" : "lightcoral";
+      card.className = `card ${this.state ? 'playing' : ''}`;
     }
     if (textEl) {
       textEl.textContent = this.text;
     }
-  }
 
-  attachListeners() {
-    console.log("Sound card connected");
-    const card = this.shadowRoot.querySelector("#card");
-    if (card) {
-      card.addEventListener("click", () => {
-        console.log("Sound card clicked");
-        this.toggleSoundState();
-        if (this.songId && this.db) {
-          if (!this.audio) {
-            this.loadAudioFromDB();
-          } else {
-            this.updateAudioPlayback();
-          }
-        }
-        this.updateCard();
-      });
+    // Update canvas size
+    const visualizer = this.shadowRoot.getElementById('visualizer');
+    if (visualizer) {
+      visualizer.width = visualizer.offsetWidth;
+      visualizer.height = visualizer.offsetHeight;
     }
   }
 
-  attachSliderListeners() {
-    // Se añade el listener al slider solo una vez
-    const slider = this.shadowRoot.querySelector("#slider");
-    if (slider) {
-      slider.addEventListener("input", () => {
-        if (this.audio) {
-          this.audio.volume = slider.volume;
+  attachListeners() {
+    const card = this.shadowRoot.querySelector("#card");
+    if (card) {
+      card.addEventListener("click", (e) => {
+        if (!e.target.closest('.loop-button')) {
+          this.toggleSoundState();
+          if (this.songId && this.db) {
+            if (!this.audio) {
+              this.loadAudioFromDB();
+            } else {
+              this.updateAudioPlayback();
+            }
+          }
+          this.updateCard();
         }
-        console.log("Volume changed to:", slider.volume);
       });
     }
   }
 
   attachLoopButtonListener() {
-    // Se añade el listener al botón de loop solo una vez
     const loopBtn = this.shadowRoot.querySelector("#loopBtn");
     if (loopBtn) {
       loopBtn.addEventListener("click", (event) => {
-        event.stopPropagation(); // Para que no se propague al click del card
+        event.stopPropagation();
         this.loop = !this.loop;
-        // Actualiza el botón según el estado del loop
-        loopBtn.textContent = this.loop ? "Reproducir en loop" : "Reproducir 1 sola vez";
+        loopBtn.className = `loop-button ${this.loop ? 'active' : ''}`;
         if (this.audio) {
           this.audio.loop = this.loop;
         }
-        console.log("Loop toggled:", this.loop);
       });
     }
-  }
-
-  toggleSoundState() {
-    this.state = !this.state;
-    this.setAttribute("state", this.state);
   }
 
   loadAudioFromDB() {
@@ -138,36 +261,54 @@ class SoundCard extends HTMLElement {
           : new Blob([song.data], { type: "audio/mpeg" });
         const blobUrl = URL.createObjectURL(audioBlob);
         this.audio = new Audio(blobUrl);
-        // Configura el loop según this.loop
         this.audio.loop = this.loop;
-        // Si no es loop (1 sola vez), agrega el listener para el fin de la reproducción
+        
+        // Set up audio context and visualizer
+        this.setupAudioContext();
+        
         if (!this.loop) {
           this.audio.addEventListener("ended", () => {
-            console.log("Audio playback ended");
-            // Cambia el estado a no reproducir y actualiza el card (color rojo)
             this.state = false;
             this.setAttribute("state", this.state);
             this.updateCard();
           });
         }
         if (this.state) {
-          this.audio.play();
+          this.audio.play().then(() => {
+            this.drawVisualizer();
+          });
         }
         const slider = this.shadowRoot.querySelector("#slider");
-        console.log("Setting volume to:", slider.volume);
         this.audio.volume = slider.volume;
       })
       .catch((error) => console.error("Error loading song:", error));
   }
 
   updateAudioPlayback() {
-    console.log("Updating audio playback");
     if (this.state) {
-      this.audio.play();
+      this.audio.play().then(() => {
+        this.drawVisualizer();
+      });
     } else {
       this.audio.pause();
       this.audio.currentTime = 0;
     }
+  }
+
+  attachSliderListeners() {
+    const slider = this.shadowRoot.querySelector("#slider");
+    if (slider) {
+      slider.addEventListener("input", () => {
+        if (this.audio) {
+          this.audio.volume = slider.volume;
+        }
+      });
+    }
+  }
+
+  toggleSoundState() {
+    this.state = !this.state;
+    this.setAttribute("state", this.state);
   }
 }
 

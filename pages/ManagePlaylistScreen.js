@@ -107,7 +107,7 @@ class ManagePlaylistScreen extends HTMLElement {
         /* Estilos para el file input customizado */
         .custom-file-input label {
           display: inline-block;
-          background: #e9ecef;
+          background:rgb(81, 125, 168);
           padding: 10px;
           border-radius: 6px;
           cursor: pointer;

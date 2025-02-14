@@ -1,4 +1,5 @@
 import "../webComponents/EditSound.js";
+import "../webComponents/PlaylistSelector.js"; // Import PlaylistSelector
 import db from "../services/indexdb.js";
 
 class ManagePlaylistScreen extends HTMLElement {
@@ -131,6 +132,8 @@ class ManagePlaylistScreen extends HTMLElement {
         }
       </style>
 
+      <playlist-selector></playlist-selector> <!-- Add PlaylistSelector component -->
+
       <div id="soundList">
             
       <button id="addNewSoundButtonSvg">
@@ -178,14 +181,10 @@ class ManagePlaylistScreen extends HTMLElement {
     document.addEventListener("songs-imported", (event) => {
       console.log("Songs importedddd");
       this.loadSounds();
-
     });
 
-    
-
-
-
     this.loadSounds();
+    this.loadPlaylists(); // Added to update playlists on connect
 
     this.shadowRoot
       .querySelector("#soundList")
@@ -201,6 +200,17 @@ class ManagePlaylistScreen extends HTMLElement {
     this.shadowRoot
       .querySelector("#newSoundFile")
       .addEventListener("change", (event) => this.updateFileName(event));
+  }
+
+  // New method to load playlists and update playlist-selector
+  async loadPlaylists() {
+    const playlists = await this.db.getAllPlaylists();
+    const playlistSelector = this.shadowRoot.querySelector("playlist-selector");
+    if (playlistSelector) {
+      playlistSelector.playlists = playlists;
+      // Si playlist-selector requiere otro método, usarlo:
+      // playlistSelector.updatePlaylists(playlists);
+    }
   }
 
   openModal() {
@@ -258,9 +268,17 @@ class ManagePlaylistScreen extends HTMLElement {
   }
 
   async loadSounds() {
-    console.log("Loading sounds...");
-    const songs = await this.db.getAllSongs();
-    console.log("Songs:", songs);
+    const playlistSelector = this.shadowRoot.querySelector("playlist-selector");
+    // Suponemos que playlist-selector tiene una propiedad 'selectedPlaylist'
+    const selectedPlaylist = playlistSelector
+      ? playlistSelector.selectedPlaylist
+      : null;
+    let songs = [];
+    if (selectedPlaylist) {
+      songs = await this.db.getSongsByPlaylist(selectedPlaylist);
+    } else {
+      songs = []; // O podrías decidir cargar todas o mostrar un mensaje
+    }
     const soundList = this.shadowRoot.querySelector("#soundList");
 
     soundList.innerHTML = `
@@ -271,7 +289,7 @@ class ManagePlaylistScreen extends HTMLElement {
           </button>
           `;
 
-      this.shadowRoot
+    this.shadowRoot
       .querySelector("#soundList")
       .querySelector("#addNewSoundButtonSvg")
       .addEventListener("click", () => this.openModal());
@@ -292,10 +310,8 @@ class ManagePlaylistScreen extends HTMLElement {
         this.loadSounds();
         document.dispatchEvent(new CustomEvent("songs-updated"));
       });
-
-
-
     });
+    this.loadPlaylists(); // Added to update playlists when sounds are loaded
   }
 }
 

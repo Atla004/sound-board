@@ -184,9 +184,6 @@ class EditSound extends HTMLElement {
   }
 
   changeSound() {
-    // Logic to change the sound
-    console.log("Change sound clicked for song ID:", this.songId);
-    // Dispatch a custom event
     const changeEvent = new CustomEvent("song-changed", {
       detail: { songId: this.songId },
     });
@@ -198,13 +195,9 @@ class EditSound extends HTMLElement {
       console.error("Database not initialized.");
       return;
     }
-    
-
-    console.log("Delete sound clicked for song ID:", this.songId);
 
     this.db.deleteSong(this.songId)
       .then(() => {
-        console.log("Song deleted with ID:", this.songId);
         const deleteEvent = new CustomEvent("song-deleted", {
           detail: { songId: this.songId },
         });
@@ -224,14 +217,12 @@ class EditSound extends HTMLElement {
       alert("Please enter a new name.");
       return;
     }
-    console.log("Save changes clicked for song ID:", this.songId);
     const song = {
       id: Number(this.songId), // Convertir a number
       title: newName,
     };
     this.db.updateSong(song)
       .then(() => {
-        console.log("Song updated with ID:", this.songId);
         this.shadowRoot.getElementById("songText").innerText = newName;
         this.setAttribute("text", newName);
         const updateEvent = new CustomEvent("song-edited");

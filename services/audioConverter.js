@@ -91,7 +91,6 @@ async function importSongsFromJSON(file) {
       })
     );
     console.log("Las canciones han sido importadas correctamente.");
-    document.dispatchEvent(new CustomEvent("songs-updated"));
   } catch (error) {
     console.error("Error al importar las canciones:", error);
   }

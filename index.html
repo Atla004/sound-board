@@ -69,8 +69,11 @@
       window.importAudio = async function (event) {
         const file = event.target.files[0];
         if (file) {
-          await importSongsFromJSON(file);
-        }
+      importSongsFromJSON(file).then(() => {
+        document.dispatchEvent(new CustomEvent("songs-updated"));
+        document.dispatchEvent(new CustomEvent("songs-imported"));
+      });
+    }
       };
     </script>
   </head>

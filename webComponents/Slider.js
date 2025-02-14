@@ -68,7 +68,6 @@ class Slider extends HTMLElement {
         <input type="range" min="0" max="1" step="0.01" value="1" class="slider" id="volumeSlider">
       </div>
     `;
-    console.log("Slider created");
   }
 
   connectedCallback() {
@@ -79,7 +78,6 @@ class Slider extends HTMLElement {
     slider.addEventListener("click", (event) => {
       event.stopPropagation();
     });
-    console.log("Slider connected");
   }
 
   get volume() {

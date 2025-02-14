@@ -9,7 +9,6 @@ class HomeScreen extends HTMLElement {
   }
 
   async loadSongs() {
-    console.log("Loading songssssss");
     const songs = await this.db.getAllSongs();
     this.shadowRoot.innerHTML = `
       <style>

@@ -175,6 +175,16 @@ class ManagePlaylistScreen extends HTMLElement {
   async connectedCallback() {
     await this.checkAndAddDefaultSong();
 
+    document.addEventListener("songs-imported", (event) => {
+      console.log("Songs importedddd");
+      this.loadSounds();
+
+    });
+
+    
+
+
+
     this.loadSounds();
 
     this.shadowRoot
@@ -282,6 +292,9 @@ class ManagePlaylistScreen extends HTMLElement {
         this.loadSounds();
         document.dispatchEvent(new CustomEvent("songs-updated"));
       });
+
+
+
     });
   }
 }

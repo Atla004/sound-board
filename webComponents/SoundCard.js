@@ -95,6 +95,11 @@ class SoundCard extends HTMLElement {
           align-items: center;
           justify-content: center;
           transition: transform 0.2s;
+          boder-color:rgb(251, 251, 251);
+          border-radius: 3px;
+          border-width: 1px;
+          border-style: solid;
+
           z-index: 1;
         }
 

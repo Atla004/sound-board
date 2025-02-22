@@ -7,6 +7,7 @@ class ManagePlaylistScreen extends HTMLElement {
     super();
     this.db = db;
     this.attachShadow({ mode: "open" });
+    this.currentplaylist = 1; 
     this.shadowRoot.innerHTML = `
   <style>
         edit-sound {
@@ -132,9 +133,10 @@ class ManagePlaylistScreen extends HTMLElement {
         }
       </style>
 
-      <playlist-selector></playlist-selector> <!-- Add PlaylistSelector component -->
+
 
       <div id="soundList">
+      
             
       <button id="addNewSoundButtonSvg">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -179,12 +181,10 @@ class ManagePlaylistScreen extends HTMLElement {
     await this.checkAndAddDefaultSong();
 
     document.addEventListener("songs-imported", (event) => {
-      console.log("Songs importedddd");
       this.loadSounds();
     });
 
     this.loadSounds();
-    this.loadPlaylists(); // Added to update playlists on connect
 
     this.shadowRoot
       .querySelector("#soundList")
@@ -200,17 +200,11 @@ class ManagePlaylistScreen extends HTMLElement {
     this.shadowRoot
       .querySelector("#newSoundFile")
       .addEventListener("change", (event) => this.updateFileName(event));
-  }
-
-  // New method to load playlists and update playlist-selector
-  async loadPlaylists() {
-    const playlists = await this.db.getAllPlaylists();
-    const playlistSelector = this.shadowRoot.querySelector("playlist-selector");
-    if (playlistSelector) {
-      playlistSelector.playlists = playlists;
-      // Si playlist-selector requiere otro método, usarlo:
-      // playlistSelector.updatePlaylists(playlists);
-    }
+    this.addEventListener("playlist-to-reload", async (e) => {
+      console.log("playlist-to-reload ocurrio", e.detail.playlistId);
+      this.currentplaylist = e.detail.playlistId;
+      this.loadSounds();
+    });
   }
 
   openModal() {
@@ -254,7 +248,7 @@ class ManagePlaylistScreen extends HTMLElement {
       data: file,
     };
 
-    this.db.saveSong(newSong).then(() => {
+    this.db.saveSong(newSong, this.currentplaylist).then(() => {
       this.loadSounds();
       this.closeModal();
       // Reset the input values
@@ -268,17 +262,15 @@ class ManagePlaylistScreen extends HTMLElement {
   }
 
   async loadSounds() {
-    const playlistSelector = this.shadowRoot.querySelector("playlist-selector");
-    // Suponemos que playlist-selector tiene una propiedad 'selectedPlaylist'
-    const selectedPlaylist = playlistSelector
-      ? playlistSelector.selectedPlaylist
-      : null;
+    let selectedPlaylist = this.currentplaylist;
+    
     let songs = [];
     if (selectedPlaylist) {
-      songs = await this.db.getSongsByPlaylist(selectedPlaylist);
+      songs = await this.db.getAllSongs(selectedPlaylist);
     } else {
       songs = []; // O podrías decidir cargar todas o mostrar un mensaje
     }
+
     const soundList = this.shadowRoot.querySelector("#soundList");
 
     soundList.innerHTML = `
@@ -311,7 +303,6 @@ class ManagePlaylistScreen extends HTMLElement {
         document.dispatchEvent(new CustomEvent("songs-updated"));
       });
     });
-    this.loadPlaylists(); // Added to update playlists when sounds are loaded
   }
 }
 

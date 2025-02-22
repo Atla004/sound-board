@@ -8,6 +8,8 @@
     <script src="./pages/HomeScreen.js" defer type="module"></script>
     <script src="./pages/ManagePlaylistScreen.js" defer type="module"></script>
     <script src="./scripts/navigation.js" defer></script>
+    <script src="./webComponents/PlaylistSelector.js" defer></script>
+    <script src="./webComponents/AddToPlaylist.js" defer type="module"></script>
     <style>
       :root {
         --bg-primary: #1a1a1a;
@@ -30,6 +32,7 @@
         ); /* Updated gradient */
         color: var(--text-primary);
         min-height: 100vh;
+        overflow: hidden;
       }
 
       header {
@@ -52,8 +55,22 @@
         padding: 20px;
       }
 
+      .playlist-selector-container {
+        position: fixed;
+        top: 0;
+        z-index: 100;
+      }
+
       #importFileInput {
         display: none;
+      }
+
+      addtoplaylist {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 300;
+        background-color: #2d2d2d;
       }
     </style>
     <script type="module">
@@ -69,16 +86,18 @@
       window.importAudio = async function (event) {
         const file = event.target.files[0];
         if (file) {
-      importSongsFromJSON(file).then(() => {
-        document.dispatchEvent(new CustomEvent("songs-updated"));
-        document.dispatchEvent(new CustomEvent("songs-imported"));
-      });
-    }
+          importSongsFromJSON(file).then(() => {
+            document.dispatchEvent(new CustomEvent("songs-updated"));
+            document.dispatchEvent(new CustomEvent("songs-imported"));
+          });
+        }
       };
     </script>
   </head>
   <body>
     <header>
+      <playlist-selectors id="playlistSelector"></playlist-selectors>
+
       <custom-button
         label="Home"
         onclick="showScreen('home-screen')"
@@ -92,6 +111,7 @@
         label="Import"
         onclick="document.getElementById('importFileInput').click()"
       ></custom-button>
+
       <input
         type="file"
         id="importFileInput"
@@ -100,12 +120,56 @@
       />
     </header>
 
-    <home-screen id="home-screen" 
-    style="display: none"
-    ></home-screen>
-    <manage-playlist-screen
-      id="manage-playlist-screen"
+    <home-screen id="home-screen" style="display: none"></home-screen>
+    <manage-playlist-screen id="manage-playlist-screen"></manage-playlist-screen>
+    <add-to-playlist id="add-to-playlist"></add-to-playlist>
 
-    ></manage-playlist-screen>
+    <script>
+      const playlistSelector = document.getElementById("playlistSelector");
+      playlistSelector.addEventListener("playlist-changed", (e) => {
+        const homeScreen = document.getElementById("home-screen");
+        homeScreen.dispatchEvent(
+          new CustomEvent("playlist-to-reload", {
+            detail: { playlistId: e.detail.playlistId },
+          })
+        );
+
+        const manager = document.getElementById("manage-playlist-screen");
+        manager.dispatchEvent(
+          new CustomEvent("playlist-to-reload", {
+            detail: { playlistId: e.detail.playlistId },
+          })
+        );
+
+        const addToPlaylist = document.getElementById("add-to-playlist");
+        addToPlaylist.dispatchEvent(
+          new CustomEvent("playlist-to-reload", {
+            detail: { playlistId: e.detail.playlistId },
+          })
+        );
+
+      });
+      const editplaylist = document.getElementById("add-to-playlist");
+      editplaylist.addEventListener("edit-playlist", (e) => {
+
+        const manager = document.getElementById("manage-playlist-screen");
+        manager.dispatchEvent(
+          new CustomEvent("playlist-to-reload", {
+            detail: { playlistId: e.detail.playlistId },
+          })
+        );
+
+        const homeScreen = document.getElementById("home-screen");
+        homeScreen.dispatchEvent(
+          new CustomEvent("playlist-to-reload", {
+            detail: { playlistId: e.detail.playlistId },
+          })
+        );
+
+      });
+
+      
+    </script>
+
   </body>
 </html>

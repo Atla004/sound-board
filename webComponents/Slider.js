@@ -5,6 +5,8 @@ class Slider extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         .slider-container {
+          display: flex;
+          align-items: center;
           width: 100%;
           padding: 10px;
         }
@@ -63,8 +65,15 @@ class Slider extends HTMLElement {
         .slider:active::-moz-range-thumb {
           transform: scale(1.2);
         }
+        
+        .volume-icon {
+          width: 24px; /* Ajusta el tamaño según sea necesario */
+          height: 24px; /* Ajusta el tamaño según sea necesario */
+          padding-right: 10px;
+        }
       </style>
       <div class="slider-container">
+        <img src="../volume-svgrepo-com.svg" class="volume-icon" alt="Volume Icon">
         <input type="range" min="0" max="1" step="0.01" value="1" class="slider" id="volumeSlider">
       </div>
     `;

@@ -2,6 +2,7 @@ class IndexedDBComponent {
   constructor() {
     this.dbName = "SoundBoardDB";
     this.storeName = "songs";
+    this.playlistStoreName = "playlists";
     this.db = null;
     this.initPromise = this.init(); // Store the promise
   }
@@ -19,9 +20,9 @@ class IndexedDBComponent {
             autoIncrement: true,
           });
         }
-        // Crear store para playlists si no existe
-        if (!this.db.objectStoreNames.contains("playlists")) {
-          this.db.createObjectStore("playlists", {
+
+        if (!this.db.objectStoreNames.contains(this.playlistStoreName)) {
+          this.db.createObjectStore(this.playlistStoreName, {
             keyPath: "id",
             autoIncrement: true,
           });
@@ -40,14 +41,31 @@ class IndexedDBComponent {
     });
   }
 
-  async saveSong(song) {
+  async saveSong(song, playlist_id = 1) {
     await this.initPromise; // Wait for initialization
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
       const request = store.add(song);
-
-      request.onsuccess = () => resolve(request.result);
+      console.log("playlistid", playlist_id);
+      request.onsuccess = async () => {
+        const newSongId = request.result;
+        try {
+          // Update playlist with id 1 always
+          const playlist1 = await this.getPlaylist(1);
+          playlist1.playlist.push(newSongId);
+          await this.updatePlaylist(playlist1);
+          // If a different playlist_id is provided, update that playlist too
+          if (playlist_id !== 1) {
+            const customPlaylist = await this.getPlaylist(playlist_id);
+            customPlaylist.playlist.push(newSongId);
+            await this.updatePlaylist(customPlaylist);
+          }
+        } catch (error) {
+          console.error("Error updating playlists", error);
+        }
+        resolve(newSongId);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -64,16 +82,19 @@ class IndexedDBComponent {
     });
   }
 
-  async getAllSongs() {
+  async getAllSongs(playlistId=1) {
     await this.initPromise; // Wait for initialization
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([this.storeName], "readonly");
-      const store = transaction.objectStore(this.storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    try {
+      const playlist = await this.getPlaylist(playlistId);
+      if (!playlist || !playlist.playlist) return [];
+      const songPromises = playlist.playlist.map((id) => this.getSong(id));
+      const songs = await Promise.all(songPromises);
+      return songs.filter(Boolean);
+    } catch (error) {
+      console.error("Error fetching songs for playlist", error);
+      return [];
+    }
+  
   }
 
   async deleteSong(id) {
@@ -117,35 +138,30 @@ class IndexedDBComponent {
     });
   }
 
-  /* Métodos para manejo de playlist */
+  // Added new methods for playlist store
+
   async savePlaylist(playlist) {
-    console.log("Playlist to be saved:", playlist); // Added log
-
-    // Si playlist es una cadena, crear un objeto con el nombre de la playlist
-    if (typeof playlist === "string") {
-      playlist = { name: playlist };
-    }
-
     await this.initPromise;
-    // Remove "id" from playlist to prevent key conflicts with autoIncrement.
-    const { id, ...playlistNoId } = playlist;
-
-    // Agregar console.log para ver qué se va a guardar
-    console.log("Playlist to be saved:", playlistNoId);
-
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readwrite");
-      const store = transaction.objectStore("playlists");
-      const request = store.add(playlistNoId);
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readwrite"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
+      const request = store.add(playlist);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
+
   async getPlaylist(id) {
     await this.initPromise;
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readonly");
-      const store = transaction.objectStore("playlists");
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readonly"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -155,8 +171,11 @@ class IndexedDBComponent {
   async getAllPlaylists() {
     await this.initPromise;
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readonly");
-      const store = transaction.objectStore("playlists");
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readonly"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -165,23 +184,26 @@ class IndexedDBComponent {
 
   async updatePlaylist(playlist) {
     await this.initPromise;
-    // Obtener playlist existente
     const existingPlaylist = await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readonly");
-      const store = transaction.objectStore("playlists");
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readonly"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
       const request = store.get(playlist.id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-
     if (!existingPlaylist) {
       return Promise.reject(new Error("Playlist not found"));
     }
-
     const updatedPlaylist = { ...existingPlaylist, ...playlist };
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readwrite");
-      const store = transaction.objectStore("playlists");
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readwrite"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
       const request = store.put(updatedPlaylist);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -191,33 +213,13 @@ class IndexedDBComponent {
   async deletePlaylist(id) {
     await this.initPromise;
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["playlists"], "readwrite");
-      const store = transaction.objectStore("playlists");
+      const transaction = this.db.transaction(
+        [this.playlistStoreName],
+        "readwrite"
+      );
+      const store = transaction.objectStore(this.playlistStoreName);
       const request = store.delete(Number(id));
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // Updated alias for createPlaylist
-  createPlaylist(playlist) {
-    console.log("About to save playlist:", playlist); // Added log
-    return this.savePlaylist(playlist);
-  }
-
-  async getSongsByPlaylist(playlistId) {
-    await this.initPromise;
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([this.storeName], "readonly");
-      const store = transaction.objectStore(this.storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const songs = request.result.filter(
-          (song) => song.playlistId === playlistId
-        );
-        resolve(songs);
-      };
       request.onerror = () => reject(request.error);
     });
   }

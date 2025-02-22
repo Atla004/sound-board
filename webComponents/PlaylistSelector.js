@@ -5,16 +5,14 @@ class PlaylistSelector extends HTMLElement {
     this.playlists = [];
     this.currentPlaylistId = 1;
   }
-  
-  // Agregar getter para la playlist activa
+
   get selectedPlaylist() {
     return this.currentPlaylistId;
   }
 
   async connectedCallback() {
-    console.log("PlaylistSelector connected");
     await this.loadPlaylists();
-    this.render();
+    await this.render();
     this.attachListeners();
   }
 
@@ -22,22 +20,21 @@ class PlaylistSelector extends HTMLElement {
     const db = await import("../services/indexdb.js").then((m) => m.default);
     this.playlists = await db.getAllPlaylists();
     if (this.playlists.length === 0) {
-      // Create default playlist if none exists
-      const newPlaylistId = await db.createPlaylist("defalt");
+      console.log("No playlists available, creating All playlist"); // Added log
+      const newPlaylistId = await db.savePlaylist({
+        name: "All",
+        playlist: [],
+      });
       this.currentPlaylistId = newPlaylistId;
       this.playlists = await db.getAllPlaylists();
     }
-    console.log("Fetched playlists:", this.playlists);
   }
 
-  render() {
+  async render() {
     this.shadowRoot.innerHTML = `
       <style>
-        .playlist-selector {
-          position: fixed;
-          top: 80px;
-          left: 20px;
-          z-index: 1000;
+        .playlist-selector-container {
+          position: absolute;
         }
 
         .dropdown-button {
@@ -51,7 +48,7 @@ class PlaylistSelector extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 8px;
-          min-width: 200px;
+          min-width: 94px;
           justify-content: space-between;
         }
 
@@ -72,6 +69,7 @@ class PlaylistSelector extends HTMLElement {
           margin-top: 8px;
           max-height: 400px;
           overflow-y: auto;
+          z-index: 1000;
         }
 
         .dropdown-content.show {
@@ -79,12 +77,12 @@ class PlaylistSelector extends HTMLElement {
         }
 
         .playlist-item {
-          padding: 12px;
-          color: #ffffff;
-          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          padding: 12px;
+          color: #ffffff;
+          cursor: pointer;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -136,8 +134,83 @@ class PlaylistSelector extends HTMLElement {
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
+        .delete-playlist {
+          cursor: pointer;
+          color: red;
+          margin-left: 8px;
+        }
+
+        /* Modal styles copied from EditSound.js */
+        .modal {
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          visibility: hidden;
+          position: fixed;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 1000;
+          align-items: center; 
+          justify-content: center;
+        }
+        .modal.show {
+          opacity: 1;
+          visibility: visible;
+        }
+        .modal-card {
+          background: white;
+          border-radius: 12px;
+          width: 300px;
+          padding: 20px;
+        }
+        input {
+          box-sizing: border-box;
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          border: 2px solid #e9ecef;
+          border-radius: 6px;
+          font-size: 16px;
+          transition: border-color 0.2s;
+        }
+        input:focus {
+          outline: none;
+          border-color: #3498db;
+        }
+        .modal-buttons {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 20px;
+        }
+        button {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: background 0.2s;
+        }
+        #applyPlaylistButton {
+          background: #2ecc71;
+          color: white;
+        }
+        #applyPlaylistButton:hover {
+          background: #27ae60;
+        }
+        #closePlaylistModal {
+          background: #e9ecef;
+          color: #495057;
+        }
+        #closePlaylistModal:hover {
+          background: #dee2e6;
+        }
       </style>
-      <div class="playlist-selector">
+      <div class="playlist-selector-container">
         <button class="dropdown-button">
           <span class="button-text">${this.getCurrentPlaylistName()}</span>
           <span class="arrow"></span>
@@ -150,7 +223,12 @@ class PlaylistSelector extends HTMLElement {
                   .map(
                     (playlist) => `
                 <div class="playlist-item" data-id="${playlist.id}">
-                  ${playlist.name}
+                  <span class="playlist-name">${playlist.name}</span>
+                  ${
+                    playlist.name !== "All"
+                      ? `<span class="delete-playlist" data-id="${playlist.id}">x</span>`
+                      : ""
+                  }
                 </div>
               `
                   )
@@ -161,16 +239,36 @@ class PlaylistSelector extends HTMLElement {
           </div>
         </div>
       </div>
+      <!-- New modal for adding playlist -->
+      <div class="modal" id="playlistModal">
+        <div class="modal-card">
+          <input type="text" id="playlistNameInput" placeholder="New playlist name" maxlength="30" />
+          <div class="modal-buttons">
+            <button id="applyPlaylistButton">Apply</button>
+            <button id="closePlaylistModal">Close</button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
   getCurrentPlaylistName() {
     if (this.playlists.length === 0) {
-      return "Create a Playlist";
+      console.log("No playlists available, creating All playlist");
+      savePlaylist({ name: "All", playlist: [] });
+      this.loadPlaylists();
     }
     const currentPlaylist = this.playlists.find(
       (p) => p.id === this.currentPlaylistId
     );
+
+    // Dispatch event when the current playlist changes
+    this.dispatchEvent(
+      new CustomEvent("playlist-changed", {
+        detail: { playlistId: this.currentPlaylistId },
+      })
+    );
+
     return currentPlaylist ? currentPlaylist.name : "Select Playlist";
   }
 
@@ -185,7 +283,8 @@ class PlaylistSelector extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll(".playlist-item").forEach((item) => {
-      item.addEventListener("click", () => {
+      item.addEventListener("click", (e) => {
+        if (e.target.classList.contains("delete-playlist")) return;
         const playlistId = Number(item.dataset.id);
         this.currentPlaylistId = playlistId;
         this.dispatchEvent(
@@ -195,36 +294,66 @@ class PlaylistSelector extends HTMLElement {
         );
         dropdownContent.classList.remove("show");
         dropdownButton.classList.remove("active");
-        this.render();
+        const buttonText = this.shadowRoot.querySelector(".button-text");
+        buttonText.textContent = this.getCurrentPlaylistName();
       });
     });
 
-    const createNewPlaylist = async () => {
-      const name = prompt("Enter playlist name:");
-      console.log("Creating new playlist with name:", name); // Added log
-      if (name) {
+    this.shadowRoot.querySelectorAll(".delete-playlist").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const playlistId = Number(btn.dataset.id);
         const db = await import("../services/indexdb.js").then(
           (m) => m.default
         );
-        const newPlaylistId = await db.createPlaylist(name);
-        console.log("Guardando playlist, enviado:", {
-          playlistId: newPlaylistId,
-        }); // Added log
+        await db.deletePlaylist(playlistId);
         await this.loadPlaylists();
-        this.currentPlaylistId = newPlaylistId;
-        this.dispatchEvent(
-          new CustomEvent("playlist-changed", {
-            detail: { playlistId: newPlaylistId },
-          })
-        );
         this.render();
         this.attachListeners();
-      }
-    };
+      });
+    });
 
-    addPlaylistButton.addEventListener("click", createNewPlaylist);
+    // Replace prompt-based createNewPlaylist with modal functionality
+    addPlaylistButton.addEventListener("click", () => {
+      const modal = this.shadowRoot.getElementById("playlistModal");
+      const input = this.shadowRoot.getElementById("playlistNameInput");
+      input.value = "";
+      modal.classList.add("show");
+    });
 
-    // Close dropdown when clicking outside using composedPath()
+    // Modal button listeners for adding playlist
+    this.shadowRoot
+      .getElementById("applyPlaylistButton")
+      .addEventListener("click", async () => {
+        const name = this.shadowRoot.getElementById("playlistNameInput").value;
+        if (name) {
+          const db = await import("../services/indexdb.js").then(
+            (m) => m.default
+          );
+          const newPlaylistId = await db.savePlaylist({ name, playlist: [] });
+          this.currentPlaylistId = newPlaylistId;
+          this.dispatchEvent(
+            new CustomEvent("playlist-changed", {
+              detail: { playlistId: newPlaylistId },
+            })
+          );
+          await this.loadPlaylists();
+          this.render();
+          this.attachListeners();
+        }
+        this.shadowRoot
+          .getElementById("playlistModal")
+          .classList.remove("show");
+      });
+
+    this.shadowRoot
+      .getElementById("closePlaylistModal")
+      .addEventListener("click", () => {
+        this.shadowRoot
+          .getElementById("playlistModal")
+          .classList.remove("show");
+      });
+
     document.addEventListener("click", (event) => {
       if (!event.composedPath().includes(this)) {
         dropdownContent.classList.remove("show");
@@ -234,4 +363,4 @@ class PlaylistSelector extends HTMLElement {
   }
 }
 
-customElements.define("playlist-selector", PlaylistSelector);
+customElements.define("playlist-selectors", PlaylistSelector);

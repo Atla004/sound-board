@@ -6,10 +6,12 @@ class HomeScreen extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this.db = db;
+    this.currentplaylist = 1; 
   }
 
   async loadSongs() {
-    const songs = await this.db.getAllSongs();
+    let selectedPlaylist = this.currentplaylist;
+    const songs = await this.db.getAllSongs(selectedPlaylist);
     this.shadowRoot.innerHTML = `
       <style>
         main {
@@ -26,17 +28,17 @@ class HomeScreen extends HTMLElement {
       </style>
       <main>
         ${songs
-          .map(song => `<sound-card song-id="${song.id}" text="${song.title}"></sound-card>`)
-          .join('')}
+          .map(
+            (song) =>
+              `<sound-card song-id="${song.id}" text="${song.title}"></sound-card>`
+          )
+          .join("")}
       </main>
     `;
   }
 
-
-  
   stopAllSongs() {
-    console.log("Stopping all songs");
-    this.shadowRoot.querySelectorAll("sound-card").forEach(card => {
+    this.shadowRoot.querySelectorAll("sound-card").forEach((card) => {
       if (card.audio) {
         card.audio.pause();
         card.audio.currentTime = 0;
@@ -49,11 +51,14 @@ class HomeScreen extends HTMLElement {
   }
 
   async connectedCallback() {
-
     await this.loadSongs();
-    // Escucha el evento personalizado para detener todas las canciones y recargar la lista 
     document.addEventListener("songs-updated", async () => {
       this.stopAllSongs();
+      await this.loadSongs();
+    });
+    this.addEventListener("playlist-to-reload", async (e) => {
+      this.stopAllSongs();
+      this.currentplaylist = e.detail.playlistId;
       await this.loadSongs();
     });
   }

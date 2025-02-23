@@ -80,13 +80,22 @@
       } from "./services/audioConverter.js";
 
       window.exportAudio = async function () {
-        await exportAllSongsToJSON();
+        // Se obtiene el id de playlist actual desde el elemento PlaylistSelector
+        const playlistSelector = document.getElementById("playlistSelector");
+        const playlistId = playlistSelector
+          ? playlistSelector.selectedPlaylist
+          : window.currentPlaylistId;
+        await exportAllSongsToJSON("audio.json", playlistId);
       };
 
       window.importAudio = async function (event) {
         const file = event.target.files[0];
+        const playlistSelector = document.getElementById("playlistSelector");
+        const playlistId = playlistSelector
+          ? playlistSelector.selectedPlaylist
+          : window.currentPlaylistId;
         if (file) {
-          importSongsFromJSON(file).then(() => {
+          importSongsFromJSON(file,playlistId).then(() => {
             document.dispatchEvent(new CustomEvent("songs-updated"));
             document.dispatchEvent(new CustomEvent("songs-imported"));
           });
@@ -121,7 +130,9 @@
     </header>
 
     <home-screen id="home-screen" style="display: none"></home-screen>
-    <manage-playlist-screen id="manage-playlist-screen"></manage-playlist-screen>
+    <manage-playlist-screen
+      id="manage-playlist-screen"
+    ></manage-playlist-screen>
     <add-to-playlist id="add-to-playlist"></add-to-playlist>
 
     <script>
@@ -147,11 +158,9 @@
             detail: { playlistId: e.detail.playlistId },
           })
         );
-
       });
       const editplaylist = document.getElementById("add-to-playlist");
       editplaylist.addEventListener("edit-playlist", (e) => {
-
         const manager = document.getElementById("manage-playlist-screen");
         manager.dispatchEvent(
           new CustomEvent("playlist-to-reload", {
@@ -165,11 +174,7 @@
             detail: { playlistId: e.detail.playlistId },
           })
         );
-
       });
-
-      
     </script>
-
   </body>
 </html>

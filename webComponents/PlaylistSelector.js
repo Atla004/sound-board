@@ -287,6 +287,7 @@ class PlaylistSelector extends HTMLElement {
         if (e.target.classList.contains("delete-playlist")) return;
         const playlistId = Number(item.dataset.id);
         this.currentPlaylistId = playlistId;
+        window.currentPlaylistId = playlistId; // Actualizamos el id global
         this.dispatchEvent(
           new CustomEvent("playlist-changed", {
             detail: { playlistId },
@@ -332,6 +333,7 @@ class PlaylistSelector extends HTMLElement {
           );
           const newPlaylistId = await db.savePlaylist({ name, playlist: [] });
           this.currentPlaylistId = newPlaylistId;
+          window.currentPlaylistId = newPlaylistId; // Actualizamos el id global
           this.dispatchEvent(
             new CustomEvent("playlist-changed", {
               detail: { playlistId: newPlaylistId },

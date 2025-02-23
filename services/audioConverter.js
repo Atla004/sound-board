@@ -38,9 +38,9 @@ function saveJSONToFile(jsonStr, fileName = "audio.json") {
  * Función principal que convierte todas las canciones en IndexedDB a Base64 y las guarda en un archivo JSON
  * @param {string} [fileName="audio.json"] - Nombre para el archivo JSON de salida.
  */
-async function exportAllSongsToJSON(fileName = "audio.json") {
+async function exportAllSongsToJSON(fileName = "audio.json", playlistId) {
   try {
-    const songs = await db.getAllSongs();
+    const songs = await db.getAllSongs(playlistId);
     const processedSongs = await Promise.all(
       songs.map(async (song) => {
         const base64Data = await convertFileToBase64(song.data);
@@ -76,7 +76,7 @@ function convertBase64ToBlob(base64) {
  * Importa canciones desde un archivo JSON.
  * @param {File} file - El archivo JSON que contiene las canciones.
  */
-async function importSongsFromJSON(file) {
+async function importSongsFromJSON(file, playlistId) {
   try {
     const fileContent = await file.text();
     const songs = JSON.parse(fileContent);
@@ -87,7 +87,7 @@ async function importSongsFromJSON(file) {
           title: song.title,
           data: blob,
         };
-        await db.saveSong(newSong);
+        await db.saveSong(newSong,playlistId);
       })
     );
     console.log("Las canciones han sido importadas correctamente.");
